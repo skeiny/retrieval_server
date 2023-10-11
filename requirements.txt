@@ -1,0 +1,6 @@
+pandas
+beautifulsoup4
+lxml
+selenium
+flask
+flask-cors
