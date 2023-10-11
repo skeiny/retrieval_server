@@ -4,7 +4,6 @@ import random
 import re
 import time
 from urllib.request import urlopen
-from selenium import webdriver
 from bs4 import BeautifulSoup
 
 # logger
