@@ -3,7 +3,7 @@ import csv
 
 
 if __name__ == '__main__':
-    with open('../input/jclist.csv', mode='r', encoding='utf-8') as file:
+    with open('../input/todo.csv', mode='r', encoding='utf-8') as file:
         csv_reader = csv.reader(file)
 
         # 跳过标题行

@@ -52,7 +52,7 @@ def getConference(c_url, officialName, area, rank):
         bsUls = cBsObj.body.find("div", {"id": "main"}).findAll("ul", {"class": "publ-list"})
         # bsLis = [item.find("li", {"class": "entry editor toc"}) for item in bsUls]
         bsLis = [li for ul in bsUls for li in ul.findAll("li", {"class": "entry editor toc"})]
-        bsCites = [item.find("cite", {"class": "input tts-content"}) for item in bsLis]
+        bsCites = [item.find("cite", {"class": "data tts-content"}) for item in bsLis]
         tasks = [{"publisher": item.find("span", {"itemprop": "publisher"}).get_text().replace("/", "&"),
                   "datePublished": item.find("span", {"itemprop": "datePublished"}).get_text(),
                   "toc-link": item.find("a", {"class": "toc-link"}).get("href")} for item in bsCites]
