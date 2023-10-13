@@ -34,7 +34,7 @@ def search():
         final_year = int(request.form.get("final_year"))
     print(final_year)
     # volumes of journals
-    vols = 10
+    vols = 5
     if request.form.get("vols") != '':
         vols = int(request.form.get("vols"))
     print(vols)
@@ -49,39 +49,25 @@ def search():
         match_pattern = str(request.form.get("match_pattern"))
     print(match_pattern)
 
-
     result_ = []
     for paths in cj_list:
-        print("hhh")
         if '会' in paths[1]:
             for y in range(final_year, start_year - 1, -1):
                 # 加载json文件
                 try:
-                    prefix = paths[2] + "_" + str(y)
-                    target_file_name = ''
-                    folder_path = "../retrieval_root/" + paths[0] + "/" + paths[1] + '/' + paths[2]
-                    files = os.listdir(folder_path)
-                    # 遍历文件列表，查找匹配的文件
-                    for file in files:
-                        if prefix in file:
-                            target_file_name = file
-                            print(target_file_name)
-                            break
-                    else:
-                        print("未找到匹配的文件 "+prefix)
-                        continue
-                    ndp = target_file_name.replace(".json", "").split("_")
-                    with open(folder_path + "/" + target_file_name, "r") as f:
+                    jsonPath = "../output/retrieval_root/" + paths[0] + "/" + paths[1] + '/' + paths[2] + '/' + paths[2] + "_" + str(y) + ".json"
+                    # print("jsonPath:" + jsonPath)
+                    with open(jsonPath, "r") as f:
                         papers = json.load(f)
                         # print(papers)
                         # 会议
                         for p in papers:
-                            # 新增属性
-                            p['jcname'] = p['journal']
+                            p['conference_or_article'] = p['conference']
+                            p['authors_str'] = ", ".join([author["name"] for author in p["authors"]])
                             p['year_or_volume'] = p['datePublished']
-                            p['publisher_or_year'] = ndp[2]
-                            # 重构属性
-                            p['authors'] = ", ".join([author["name"] for author in p["authors"]])
+                            p['publisher'] = p['publisher']
+                            del p['datePublished']
+                            del p['conference']
                             if start_year <= int(p['year_or_volume']) <= final_year:
                                 save = False
                                 if match_pattern == '1':
@@ -116,38 +102,43 @@ def search():
                                     if count == len(key_words):
                                         p['id'] = len(result_)
                                         result_.append(p)
+                except FileNotFoundError:
+                    continue
                 except BaseException as e:
                     print(e)
                     continue
         else:
             # 期刊
-            folder_path = "new_paper_collect/" + paths[0] + "/" + paths[1] + '/' + paths[2].lower()  # 替换为你要扫描的文件夹路径
-
+            folder_path = "../output/retrieval_root/" + paths[0] + "/" + paths[1] + '/' + paths[2]  # 替换为你要扫描的文件夹路径
             max_number = float('-inf')  # 初始化最大数字为负无穷大
 
             # 遍历文件夹中的文件
             for file_name in os.listdir(folder_path):
+                # print(file_name)
                 # 使用正则表达式提取文件名中的数字部分
                 match = re.search(r'\d+', file_name)
                 if match:
                     number = int(match.group())  # 提取到的数字部分转换为整数
                     max_number = max(max_number, number)
 
-            latest_vol = max_number
-            print('latest_vol: ' + str(latest_vol))
+            if len(os.listdir(folder_path)) <= 0:
+                latest_vol = 0
+            else:
+                latest_vol = max_number
+            # print(folder_path + 'latest_vol: ' + str(latest_vol))
             for volume in range(latest_vol, latest_vol - vols, -1):
-                print(volume)
+                # print(volume)
                 try:
                     with open(
-                            "new_paper_collect/" + paths[0] + "/" + paths[1] + '/' + paths[2].lower() + '/' + paths[
-                                2].lower() + str(volume) + ".json", "r") as f:
+                            "../output/retrieval_root/" + paths[0] + "/" + paths[1] + '/' + paths[2] + '/' + paths[2]+ "_" + str(volume) + ".json", "r") as f:
                         papers = json.load(f)
                         # print(papers)
                         # 期刊
                         for p in papers:
                             p['conference_or_article'] = p['journal']
-                            p['authors'] = ", ".join([author["name"] for author in p["authors"]])
+                            p['authors_str'] = ", ".join([author["name"] for author in p["authors"]])
                             p['year_or_volume'] = p['volume']
+                            p['year'] = p['datePublished']
                             del p['volume']
                             del p['journal']
                             if latest_vol - int(p['year_or_volume']) <= vols:
@@ -185,6 +176,8 @@ def search():
                                     if count == len(key_words):
                                         p['id'] = len(result_)
                                         result_.append(p)
+                except FileNotFoundError:
+                    continue
                 except BaseException as e:
                     print(e)
                     continue

@@ -1,5 +1,6 @@
 pandas
-beautifulsoup4
+beautifulsoup4~=4.12.2
 lxml
-flask
+flask~=3.0.0
 flask-cors
+selenium~=4.14.0

@@ -53,9 +53,20 @@ def getConference(c_url, officialName, area, rank):
         # bsLis = [item.find("li", {"class": "entry editor toc"}) for item in bsUls]
         bsLis = [li for ul in bsUls for li in ul.findAll("li", {"class": "entry editor toc"})]
         bsCites = [item.find("cite", {"class": "data tts-content"}) for item in bsLis]
-        tasks = [{"publisher": item.find("span", {"itemprop": "publisher"}).get_text().replace("/", "&"),
-                  "datePublished": item.find("span", {"itemprop": "datePublished"}).get_text(),
-                  "toc-link": item.find("a", {"class": "toc-link"}).get("href")} for item in bsCites]
+        tasks = []
+        for cite in bsCites:
+            task_ = {"publisher": "None", "datePublished": "None", "toc-link": "None"}
+            publisher = cite.find("span", {"itemprop": "publisher"})
+            datePublished = cite.find("span", {"itemprop": "datePublished"})
+            toc_link = cite.find("a", {"class": "toc-link"})
+            if publisher is not None:
+                task_["publisher"] = publisher.get_text()
+            if datePublished is not None:
+                task_["datePublished"] = datePublished.get_text()
+            if toc_link is not None:
+                task_["toc-link"] = toc_link.get("href")
+            tasks.append(task_)
+        # print(tasks)
     except Exception as e:
         logger.error("Failed to create tasks. " + c_url + " " + officialName + " Details: " + e.__str__())
         return
@@ -73,7 +84,11 @@ def getConference(c_url, officialName, area, rank):
 
 
 def getBsObj(url):
-    wait_time = random.uniform(1, 3)
+    if url is None:
+        logger.info("Url is None")
+        return None
+    wait_time = random.uniform(0.1, 0.5)
+    print("sleep time: "+str(wait_time))
     time.sleep(wait_time)
     try:
         print("getting: " + url)
@@ -90,14 +105,30 @@ def getBsObj(url):
 
 
 def saveJSON(papers, jsonPath):
-    # 写入文件
+    old_len = 0
+    add_len = len(papers)
+    new_data = []
+    if os.path.exists(jsonPath):
+        with open(jsonPath, "r") as f:
+            print("Combing data...")
+            new_data = json.load(f)
+            #print(new_data)
+            old_len = len(new_data)
+    new_data.extend(papers)
+    #print(new_data)
+    # 使用字典来去除重复项
+    doi_set = set()
+    unique_list = []
+    for p in new_data:
+        doi = p["doi"]
+        if doi not in doi_set:
+            unique_list.append(p)
+            doi_set.add(doi)
+    new_len = len(unique_list)
     with open(jsonPath, "w") as f:
-        json.dump(papers, f, indent=4)
-    # 读出来看看
-    with open(jsonPath, "r") as f:
-        new_list = json.load(f)
-        for item in new_list:
-            print(item)
+        json.dump(unique_list, f, indent=4)
+    # print(jsonPath + ": old_len="+str(old_len)+", add_len="+str(add_len)+", new_len="+str(new_len))
+    logger.info(jsonPath + ": old_len="+str(old_len)+", add_len="+str(add_len)+", new_len="+str(new_len))
 
 
 def runTasks(ttype, tasks, folder, officialName, url):
@@ -127,17 +158,18 @@ def runTasks(ttype, tasks, folder, officialName, url):
                 bsMain = bsObj.body.find("div", {"id": "main"})
                 bsHeader = bsMain.find("header", {"class": "h2"}, recursive=False)
                 bsH2 = bsHeader.find("h2")
-                params = re.sub(r'[^,\d-]', '', bsH2.get_text()).split(",")
-                if len(params) >= 1:
-                    task["volume"] = params[0]
-                    if len(params) >= 2:
-                        task["datePublished"] = params[-1]
+                if bsH2 is not None:
+                    params = re.sub(r'[^,\d-]', '', bsH2.get_text()).split(",")
+                    if len(params) >= 1:
+                        task["volume"] = params[0].replace("/", "&")
+                        if len(params) >= 2:
+                            task["datePublished"] = params[-1].replace("/", "&")
             except Exception as e:
                 logger.error("Get volume and datePublished error. " + task[
                     "toc-link"] + " " + officialName + "Details: " + e.__str__())
-            jsonPath = folder + '/' + officialName + "_" + task["volume"] + "_" + task["datePublished"] + ".json"
+            jsonPath = folder + '/' + officialName + "_" + task["volume"] + ".json"
         else:
-            jsonPath = folder + "/" + officialName + "_" + task["datePublished"] + "_" + task["publisher"] + ".json"
+            jsonPath = folder + "/" + officialName + "_" + task["datePublished"] + ".json"
 
         print("Crawling " + jsonPath)
 
@@ -175,7 +207,8 @@ def runTasks(ttype, tasks, folder, officialName, url):
                         paper["volume"] = task["volume"]
                     else:
                         paper["conference"] = officialName
-                    paper["datePublished"] = task["datePublished"]
+                        paper["publisher"] = task["publisher"]
+                    paper["datePublished"] = item.cite.find("meta", {"itemprop": "datePublished"})["content"]
                     paper["doi"] = paper_url
                     papers.append(paper)
         except BaseException as e:
