@@ -67,10 +67,7 @@ def getConference(c_url, officialName, area, rank):
             if toc_link is not None:
                 task_["toc-link"] = toc_link.get("href")
             tasks.append(task_)
-        print(tasks)
-        tasks = [{"publisher": item.find("span", {"itemprop": "publisher"}).get_text().replace("/", "&"),
-                  "datePublished": item.find("span", {"itemprop": "datePublished"}).get_text(),
-                  "toc-link": item.find("a", {"class": "toc-link"}).get("href")} for item in bsCites]
+        # print(tasks)
     except Exception as e:
         logger.error("Failed to create tasks. " + c_url + " " + officialName + " Details: " + e.__str__())
         return
