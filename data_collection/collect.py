@@ -121,7 +121,7 @@ def saveJSON(papers, jsonPath):
     unique_list = []
     for p in new_data:
         doi = p["doi"]
-        if doi not in doi_set:
+        if "None".__eq__(doi) or doi not in doi_set:
             unique_list.append(p)
             doi_set.add(doi)
     new_len = len(unique_list)
@@ -194,28 +194,35 @@ def runTasks(ttype, tasks, folder, officialName, url):
                     temp = item.cite.findAll("span", {"itemprop": "author"})
                     for aa in temp:
                         authors.append({'url': aa.a["href"], 'name': aa.a.span.get_text()})
-                    paper_url = \
-                        item.find("nav", {"class": "publ"}).find("ul").findAll("li", {"class": "drop-down"})[0].find(
-                            "div",
-                            {
-                                "class": "head"}).a[
-                            "href"]
+                    bsLis = item.find("nav", {"class": "publ"}).find("ul").findAll("li", {"class": "drop-down"})
+                    bsHead = bsLis[0].find("div", {"class": "head"})
+                    if bsHead.find("a") is None:
+                        # print("paper_url = None")
+                        paper_url = "None"
+                    else:
+                        paper_url = bsHead.a["href"]
+                        # print(paper_url)
                     paper["title"] = item.cite.find("span", {"class": "title"}).get_text()
                     paper["authors"] = authors
+
                     if "journal".__eq__(str(ttype)):
                         paper["journal"] = officialName
                         paper["volume"] = task["volume"]
                     else:
                         paper["conference"] = officialName
                         paper["publisher"] = task["publisher"]
-                    paper["datePublished"] = item.cite.find("meta", {"itemprop": "datePublished"})["content"]
+                    bsDatePublished = item.cite.find("meta", {"itemprop": "datePublished"})
+                    if bsDatePublished is None or bsDatePublished.find("content") is None:
+                        paper["datePublished"] = "None"
+                    else:
+                        paper["datePublished"] = bsDatePublished["content"]
                     paper["doi"] = paper_url
                     papers.append(paper)
-        except BaseException as e:
+        except Exception as e:
             logger.error("Failed to Parse NoneType. " + jsonPath + " - " + officialName + " ""Details: " + e.__str__())
             continue
         saveJSON(papers, jsonPath)
-        logger.info("Success. " + jsonPath)
+        # logger.info("Success. " + jsonPath)
         papers.clear()
         with open('../logs/success.txt', 'a', encoding="utf-8") as file:
             file.write(task["toc-link"] + '\n')
